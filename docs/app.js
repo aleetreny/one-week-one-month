@@ -51,7 +51,7 @@
   function geom() {
     DPR = Math.min(devicePixelRatio || 1, 2); W = Math.max(innerWidth, 320); H = Math.max(innerHeight, 400);
     cv.width = W * DPR; cv.height = H * DPR; ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    mob = W < 820;
+    mob = W < 820; fs = mob ? 10.5 : 12;
     B = mob ? { x0: 34, x1: W - 22, y0: H * 0.11, y1: H * 0.47 }
             : { x0: W * 0.45, x1: W * 0.92, y0: H * 0.17, y1: H * 0.83 };
     B.w = B.x1 - B.x0; B.h = B.y1 - B.y0;
@@ -71,20 +71,64 @@
   function put(L, i, x, y, c, a, s) { L.x[i] = x; L.y[i] = y; L.c[i] = c; L.a[i] = a; L.s[i] = s; }
   function dust(L, i) { put(L, i, r1[i] * W, r2[i] * H, 0, .05 + .07 * r3[i], 1); }
   let tDir = 1;
-  function mixInto(out, A, Bl, k, spread = .45, wild = 1) {
-    const cx = W / 2, cy = H / 2, amp = Math.min(W, H) * .22 * wild;
+  // a different journey for each change of scene
+  const M = { VORTEX: 0, WARP: 1, RAIN: 2, WAVE: 3, FIRE: 4, BANG: 5, DROP: 6, RIVER: 7, FUNNEL: 8 };
+  const bounceOut = t => { const n = 7.5625, d = 2.75; if (t < 1 / d) return n * t * t; if (t < 2 / d) return n * (t -= 1.5 / d) * t + .75; if (t < 2.5 / d) return n * (t -= 2.25 / d) * t + .9375; return n * (t -= 2.625 / d) * t + .984375; };
+  const backOut = t => { const c1 = 1.9, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
+  const easeIn = t => t * t * t;
+  function mixInto(out, A, Bl, k, spread = .45, wild = 1, mode = M.VORTEX) {
+    const cx = W / 2, cy = H / 2, amp = Math.min(W, H) * .22 * wild, mn = Math.min(W, H);
+    const ocx = mode === M.FUNNEL ? FX : cx, ocy = mode === M.FUNNEL ? FY : cy;
     for (let i = 0; i < N; i++) {
-      const ki = ease(clamp((k - r4[i] * spread) / (1 - spread), 0, 1)), m = Math.sin(Math.PI * ki);
-      const mx = A.x[i] + (Bl.x[i] - A.x[i]) * ki - cx, my = A.y[i] + (Bl.y[i] - A.y[i]) * ki - cy;
-      // vortex around the centre of the screen, blown outwards, plus a turbulent kick
-      const sp = m * wild * tDir * (.7 + r5[i] * 1.6), cs = Math.cos(sp), sn = Math.sin(sp), bl = 1 + m * wild * (.15 + r6[i] * .55);
-      const th = r6[i] * TAU + now * .9 + mx * .004, kick = m * amp * (r5[i] - .3);
-      out.x[i] = cx + (mx * cs - my * sn) * bl + Math.cos(th) * kick;
-      out.y[i] = cy + (mx * sn + my * cs) * bl + Math.sin(th) * kick;
-      out.c[i] = lerp(A.c[i], Bl.c[i], ki); out.a[i] = Math.min(1, lerp(A.a[i], Bl.a[i], ki) + m * wild * .35);
-      out.s[i] = lerp(A.s[i], Bl.s[i], ki) * (1 + m * wild * 1.1);
+      const ax = A.x[i], ay = A.y[i], bx = Bl.x[i], by = Bl.y[i];
+      let d = r4[i];
+      if (mode === M.RAIN || mode === M.WAVE || mode === M.RIVER) d = clamp(bx / W, 0, 1) * .75 + r4[i] * .25;
+      else if (mode === M.DROP) d = clamp((bx - B.x0) / B.w, 0, 1) * .55 + clamp((B.y1 - by) / B.h, 0, 1) * .3 + r4[i] * .15;
+      const lin = clamp((k - d * spread) / (1 - spread), 0, 1), ki = ease(lin), m = Math.sin(Math.PI * ki);
+      let x = ax + (bx - ax) * ki, y = ay + (by - ay) * ki, sz = 1 + m * wild * .9;
+      switch (mode) {
+        case M.WARP: { // hyperspace: everything streaks out from the centre and back in
+          const dx = x - cx, dy = y - cy, dd = Math.hypot(dx, dy) + 1, push = m * m * (.5 + r5[i]) * mn * .75 * wild;
+          x += dx / dd * push; y += dy / dd * push; sz = 1 + m * 1.4; break; }
+        case M.RAIN: { // lift off, then fall into place and bounce
+          const up = ay - (.12 + r5[i] * .3) * H;
+          x = ax + (bx - ax) * ease(clamp(lin * 1.4, 0, 1));
+          y = lin < .3 ? lerp(ay, up, easeOut(lin / .3)) : lerp(up, by, bounceOut((lin - .3) / .7)); break; }
+        case M.WAVE: { // a breaking wave sweeping left to right
+          y += m * Math.sin(x * .011 - lin * 7 + r5[i] * .6) * H * .2; x += m * (r6[i] - .5) * 40; break; }
+        case M.FIRE: { // fireworks: every dot is launched on an arc
+          y -= m * (.18 + r5[i] * .4) * H; x += m * (r6[i] - .5) * mn * .25; sz = 1 + m * 1.6; break; }
+        case M.BANG: { // implode to a single point, then a big bang
+          const px = cx + (r5[i] - .5) * 10, py = cy + (r6[i] - .5) * 10;
+          if (lin < .45) { const t = easeIn(lin / .45); x = lerp(ax, px, t); y = lerp(ay, py, t); sz = 1 + t * .6; }
+          else { const t = backOut((lin - .45) / .55); x = lerp(px, bx, t); y = lerp(py, by, t); sz = 1 + (1 - t) * 2.2; }
+          break; }
+        case M.DROP: { // fly above the chart, then drop into the bars like sand
+          const top = B.y0 - (.1 + r5[i] * .35) * H;
+          if (lin < .45) { const t = ease(lin / .45); x = lerp(ax, bx, t); y = lerp(ay, top, t); }
+          else { x = bx; y = lerp(top, by, bounceOut((lin - .45) / .55)); }
+          sz = 1 + m * .5; break; }
+        case M.RIVER: { // a snake of light flowing along the axis
+          y += m * Math.sin(lin * TAU * 1.5 + r5[i] * 1.2) * H * .22; break; }
+        case M.FUNNEL: { // a tornado that swallows everything into the hourglass
+          const ra = Math.hypot(ax - ocx, ay - ocy), rb = Math.hypot(bx - ocx, by - ocy);
+          const aa = Math.atan2(ay - ocy, ax - ocx); let ab = Math.atan2(by - ocy, bx - ocx);
+          const ang = aa + (ab - aa + tDir * TAU * (1.2 + r5[i] * .8)) * ki, rr = lerp(ra, rb, ki) * (1 - m * .7);
+          x = ocx + Math.cos(ang) * rr; y = ocy + Math.sin(ang) * rr * (1 - m * .35); sz = 1 + m * 1.1; break; }
+        default: { // vortex around the centre, blown outwards, plus a turbulent kick
+          const mx = x - cx, my = y - cy, sp = m * wild * tDir * (.7 + r5[i] * 1.6), cs = Math.cos(sp), sn = Math.sin(sp), bl = 1 + m * wild * (.15 + r6[i] * .55);
+          const th = r6[i] * TAU + now * .9 + mx * .004, kick = m * amp * (r5[i] - .3);
+          x = cx + (mx * cs - my * sn) * bl + Math.cos(th) * kick; y = cy + (mx * sn + my * cs) * bl + Math.sin(th) * kick; sz = 1 + m * wild * 1.1;
+        }
+      }
+      out.x[i] = x; out.y[i] = y;
+      out.c[i] = lerp(A.c[i], Bl.c[i], ki); out.a[i] = Math.min(1, lerp(A.a[i], Bl.a[i], ki) + m * wild * .3);
+      out.s[i] = lerp(A.s[i], Bl.s[i], ki) * sz;
     }
   }
+  // per scene: how you arrive there, how long the trails are, how the camera moves
+  const ARRIVE = [M.VORTEX, M.WARP, M.RAIN, M.WAVE, M.VORTEX, M.BANG, M.DROP, M.RIVER, M.FUNNEL, M.VORTEX];
+  const TRAIL = { 0: .14, 1: .08, 2: .4, 3: .3, 4: .25, 5: .2, 6: .45, 7: .22, 8: .12 };
 
   // clock phases advance with time
   let phA = 0.6, phB = 2.2, now = 0;
@@ -165,7 +209,7 @@
     scatterLayout(T1, hl);
     const k = clamp((p - .26) / .26, 0, 1);
     if (k <= 0) { copyL(L, T1); return; }
-    calLayout(T2); mixInto(L, T1, T2, k, .55, .55);
+    calLayout(T2); mixInto(L, T1, T2, k, .55, .8, M.FIRE);
   }
   function copyL(D_, S) { D_.x.set(S.x); D_.y.set(S.y); D_.c.set(S.c); D_.a.set(S.a); D_.s.set(S.s); }
 
@@ -276,17 +320,17 @@
   ];
 
   // ---------- overlays (axes, labels) ----------
-  const MUTED = "160,166,178", TXT = "236,234,229", AMB = "242,166,59", WRK = "226,232,244";
-  const sans = (px, w = 400) => `${w} ${px}px "Bricolage Grotesque", sans-serif`;
-  const serif = (px, it = false) => `${it ? 700 : 500} ${px}px "Bricolage Grotesque", sans-serif`;
+  const MUTED = "178,183,193", TXT = "236,234,229", AMB = "242,166,59", WRK = "226,232,244";
+  const sans = (px, w = 400) => w >= 500 ? `${w} ${px}px "Bricolage Grotesque", sans-serif` : `${px + 2}px "Cutive Mono", monospace`;
+  const serif = (px, it = false) => it ? `italic ${Math.round(px * 1.15)}px "Instrument Serif", serif` : `700 ${px}px "Bricolage Grotesque", sans-serif`;
   function txt(s, x, y, font, rgb, a, align = "left", base = "alphabetic") { ctx.font = font; ctx.fillStyle = `rgba(${rgb},${a})`; ctx.textAlign = align; ctx.textBaseline = base; ctx.fillText(s, x, y); }
   function line(x0, y0, x1, y1, rgb, a, w = 1, dash) { ctx.strokeStyle = `rgba(${rgb},${a})`; ctx.lineWidth = w; ctx.setLineDash(dash || []); ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); ctx.setLineDash([]); }
-  const fs = mob ? 10.5 : 12;
+  let fs = 12;
 
   function ovSpeed(a) {
-    const s = mob ? 34 : 64;
-    txt("2×", FX + FR * 1.05 * .58, FY - FR * 1.05 * .62, serif(s, true), WRK, a * .9, "left");
-    txt("faster work, they say", FX + FR * 1.05 * .58, FY - FR * 1.05 * .62 + fs + 8, sans(fs), MUTED, a * .8, "left", "top");
+    const s = mob ? 34 : 64, Rr = FR * 1.05, y = FY + Rr * .5;
+    txt("2×", FX, y, serif(s), WRK, a * .95, "center", "alphabetic");
+    txt("faster work, scientists say", FX, y + 12, sans(fs), MUTED, a * .85, "center", "top");
   }
   function ovGrid(a) {
     const g = gridGeo;
@@ -302,8 +346,8 @@
     [[0, "1 h"], [1, "10 h"], [2, "100 h"], [3, "1,000 h"]].forEach(([v, s]) => txt(s, sx(v), B.y1 + 14, sans(fs), MUTED, a, "center", "top"));
     [[Math.log10(1 / 24), "1 hour"], [0, "1 day"], [Math.log10(7), "1 week"], [Math.log10(30), "1 month"], [Math.log10(365), "1 year"]]
       .forEach(([v, s]) => { txt(s, B.x0 - 14, sy(v), sans(fs), MUTED, a, "right", "middle"); line(B.x0 - 8, sy(v), B.x1, sy(v), MUTED, a * .07); });
-    txt("hours of hands-on work →", B.x1, B.y1 + 16 + fs + 8, sans(fs, 500), TXT, a * .8, "right", "top");
-    txt("↑ days on the calendar", B.x0 - 8, B.y0 - 16, sans(fs, 500), TXT, a * .8, "left", "bottom");
+    txt("working time (hours) →", B.x1, B.y1 + 16 + fs + 8, sans(fs, 500), TXT, a * .8, "right", "top");
+    txt("↑ calendar time", B.x0 - 8, B.y0 - 16, sans(fs, 500), TXT, a * .8, "left", "bottom");
     // the "no waiting" line: days = hours / 24
     const x0 = SX[0], x1 = SX[1], off = Math.log10(24);
     line(sx(x0), sy(x0 - off), sx(x1), sy(x1 - off), WRK, a * .55, 1, [4, 5]);
@@ -413,11 +457,16 @@
   const bucketCount = new Int32Array(NB), bucketStart = new Int32Array(NB), order = new Int32Array(N), bk = new Int32Array(N);
   const OUT = mk();
 
-  function render(Lr, globalA, motion) {
-    if (motion > .02 && !RM) { ctx.globalAlpha = 1; ctx.fillStyle = `rgba(10,12,16,${lerp(1, .14, motion)})`; ctx.fillRect(0, 0, W, H); }
+  function render(Lr, globalA, motion, mode) {
+    if (motion > .02 && !RM) { ctx.globalAlpha = 1; ctx.fillStyle = `rgba(10,12,16,${lerp(1, TRAIL[mode], motion)})`; ctx.fillRect(0, 0, W, H); }
     else ctx.clearRect(0, 0, W, H);
     ctx.save();
-    if (!RM && motion > 0) { ctx.translate(W / 2, H / 2); ctx.rotate(.09 * motion * tDir); ctx.scale(1 + .14 * motion, 1 + .14 * motion); ctx.translate(-W / 2, -H / 2); }
+    if (!RM && motion > 0) {
+      const rot = mode === M.VORTEX ? .09 : mode === M.FUNNEL ? .12 : mode === M.BANG ? .04 : 0;
+      const zm = mode === M.WARP ? .32 : mode === M.BANG ? .2 : mode === M.VORTEX || mode === M.FUNNEL ? .14 : .05;
+      const shake = mode === M.BANG ? Math.sin(now * 60) * motion * 3 : 0;
+      ctx.translate(W / 2 + shake, H / 2); ctx.rotate(rot * motion * tDir); ctx.scale(1 + zm * motion, 1 + zm * motion); ctx.translate(-W / 2, -H / 2);
+    }
     bucketCount.fill(0);
     for (let i = 0; i < N; i++) {
       const a = Lr.a[i] * globalA; if (a < .012) { bk[i] = -1; continue; }
@@ -485,9 +534,11 @@
         b.w.forEach((w, k) => {
           const t = easeOut(clamp(lp * 1.7 - k / Math.max(n, 1) * .7, 0, 1)), u = 1 - t;
           const dx = w._dx * u - w._dx * exE * 2.5, dy = w._dy * u - Math.abs(w._dy) * exE * 2 - exE * 1.5, r = w._r * u - w._r * exE * 1.5;
+          const key = t * 1000 + exE; if (w._k === key) return; w._k = key;
+          const settled = t >= 1 && exE === 0;
           w.style.opacity = t * (1 - exE);
-          w.style.transform = RM ? "none" : `translate(${dx}em,${dy}em) rotate(${r}deg) scale(${.55 + .45 * t + exE * .4})`;
-          const bl = u * 8 + exE * 10; w.style.filter = bl < .05 ? "none" : `blur(${bl}px)`;
+          w.style.transform = RM || settled ? "none" : `translate(${dx.toFixed(3)}em,${dy.toFixed(3)}em) rotate(${r.toFixed(2)}deg) scale(${(.55 + .45 * t + exE * .4).toFixed(3)})`;
+          const bl = u * 8 + exE * 10; w.style.filter = bl < .05 ? "none" : `blur(${bl.toFixed(2)}px)`;
         });
         const nxt = list[j + 1]; b.el.classList.toggle("past", !!nxt && pp > nxt.at + .04 && !b.el.classList.contains("note") && !b.el.classList.contains("keep"));
         if (b.num) b.num.textContent = Math.round(+b.num.dataset.count * easeOut(clamp((pp - b.at) / .22, 0, 1))).toLocaleString("en-US");
@@ -524,7 +575,7 @@
   let skewV = 0;
 
   // HUD
-  const chapter = document.getElementById("chapter"), bar = document.getElementById("bar"), rail = document.getElementById("rail");
+  const legend = document.getElementById("legend"), chapter = document.getElementById("chapter"), bar = document.getElementById("bar"), rail = document.getElementById("rail");
   secs.forEach((s, i) => { const b = document.createElement("button"); b.innerHTML = "<i></i>"; b.title = s.dataset.name; b.setAttribute("aria-label", s.dataset.name); b.onclick = () => go(tops[i] + (i ? innerHeight * .2 : 0)); rail.appendChild(b); });
   const railBtns = [...rail.children];
   let lastChapter = -1;
@@ -532,6 +583,7 @@
     if (si !== lastChapter) {
       lastChapter = si; chapter.innerHTML = `${String(si + 1).padStart(2, "0")} &nbsp;${secs[si].dataset.name}`;
       railBtns.forEach((b, i) => b.classList.toggle("on", i === si));
+      legend.classList.toggle("on", si >= 2);
     }
     bar.style.transform = `scaleX(${clamp(y / (document.documentElement.scrollHeight - innerHeight), 0, 1)})`;
   }
@@ -567,7 +619,8 @@
     phB += dt * (RM ? 0 : .02);
 
     tDir = si % 2 ? 1 : -1;
-    if (si > 0 && k < 1) { SCENES[si - 1].lay(LA, 1); SCENES[si].lay(LB, p); mixInto(OUT, LA, LB, k, .5, 1); }
+    const mode = ARRIVE[si];
+    if (si > 0 && k < 1) { SCENES[si - 1].lay(LA, 1); SCENES[si].lay(LB, p); mixInto(OUT, LA, LB, k, .5, 1, mode); }
     else SCENES[si].lay(OUT, p);
 
     // intro: gather from dust
@@ -577,7 +630,7 @@
     const fade = clamp(1 - (y + vh - notesTop - vh * .35) / (vh * .6), .12, 1);
     let motion = si > 0 && k < 1 ? Math.sin(Math.PI * k) : 0;
     if (ik < 1) motion = Math.max(motion, Math.sin(Math.PI * ik) * .8);
-    render(OUT, fade, motion);
+    render(OUT, fade, motion, ik < 1 && !(si > 0 && k < 1) ? M.VORTEX : mode);
 
     // overlays
     if (si > 0 && SCENES[si - 1].ov && k < 1) SCENES[si - 1].ov((1 - k) * (1 - k) * fade, 1);
@@ -587,7 +640,8 @@
     updateHero(y);
     if (!RM) {
       const v = lenis ? lenis.velocity : 0; skewV = lerp(skewV, clamp(v * .12, -7, 7), .12);
-      if (Math.abs(skewV) > .01) inners.forEach(el => el.style.transform = `skewY(${skewV * .5}deg) translateY(${-skewV * 2}px)`);
+      if (Math.abs(skewV) > .01) inners.forEach(el => el.style.transform = `skewY(${(skewV * .5).toFixed(3)}deg) translateY(${(-skewV * 2).toFixed(2)}px)`);
+      else if (skewV !== 0) { skewV = 0; inners.forEach(el => el.style.transform = ""); }
     }
     hud(si, y);
     requestAnimationFrame(frame);
