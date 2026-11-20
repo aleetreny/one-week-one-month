@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One week of work, one month of waiting</title>
+<meta name="description" content="AI is getting good at the research tasks that were already fast. The slow ones are slow because they wait. A scroll through 6,666 research tasks.">
+<meta property="og:title" content="One week of work, one month of waiting">
+<meta property="og:description" content="AI is getting good at the research tasks that were already fast. The slow ones are slow because they wait.">
+<meta name="theme-color" content="#0A0C10">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,200..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%23E2E8F4' stroke-width='2'/%3E%3Cpath d='M16 16V6' stroke='%23E2E8F4' stroke-width='2.4' stroke-linecap='round'/%3E%3Cpath d='M16 16l6 5' stroke='%23F2A63B' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+</head>
+<body>
+<canvas id="stage" aria-hidden="true"></canvas>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="hud">
+  <a class="mark" href="#top"><span class="dot"></span>Two clocks</a>
+  <span class="chapter" id="chapter">01 &nbsp;Two clocks</span>
+</header>
+<div class="progress" aria-hidden="true"><i id="bar"></i></div>
+<nav class="rail" id="rail" aria-label="Chapters"></nav>
+
+<main id="top">
+
+  <section class="scene hero" data-scene="0" data-name="Two clocks" style="--h:190">
+    <div class="copy center">
+      <div class="inner">
+        <p class="kicker intro">6,666 research tasks &middot; 318 fields</p>
+        <h1 class="title">
+          <span class="l1 intro">One week of <span class="work">work.</span></span>
+          <span class="l2 intro">One month of <em class="wait">waiting.</em></span>
+        </h1>
+        <p class="dek intro">AI is getting good at the research tasks that were already fast. The slow ones are slow because they wait.</p>
+        <p class="cue intro"><span>Scroll</span><i></i></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="scene" data-scene="1" data-name="Speed">
+    <div class="copy"><div class="inner">
+      <p class="beat" data-at="0.08">Scientists say AI already makes their work <b class="k">almost twice as fast.</b></p>
+      <p class="beat" data-at="0.32">Almost all of them expect discoveries to come sooner.<sup><a href="#n1">1</a></sup></p>
+      <p class="beat big" data-at="0.58">So where does that speedup land?</p>
+    </div></div>
+  </section>
+
+  <section class="scene" data-scene="2" data-name="Tasks">
+    <div class="copy"><div class="inner">
+      <p class="beat count" data-at="0.06"><span class="num" data-count="6666">0</span></p>
+      <p class="beat" data-at="0.2">tasks that go into research papers, across <b class="k">318 fields</b>, from numerical analysis to religious history.</p>
+      <p class="beat note" data-at="0.5">Each point of light is one task.</p>
+    </div></div>
+  </section>
+
+  <section class="scene" data-scene="3" data-name="The gap">
+    <div class="copy"><div class="inner">
+      <p class="beat big" data-at="0.06">Every task runs on two clocks.</p>
+      <p class="beat" data-at="0.24">The <b class="k">hours</b> a team spends working on it&hellip;</p>
+      <p class="beat" data-at="0.4">&hellip;and the <b class="k">days</b> it takes on the calendar, from start to finish.</p>
+      <p class="beat" data-at="0.58">The distance between the two is <em class="wait">waiting</em>. The higher a task floats above the line, the longer it waits.</p>
+    </div></div>
+  </section>
+
+  <section class="scene tall" data-scene="4" data-name="One week">
+    <div class="copy"><div class="inner">
+      <p class="beat big" data-at="0.04">Take the tasks that need about <b class="k">one week</b> of hands-on work.</p>
+      <p class="beat" data-at="0.42">If AI is rated among the best at the task, it is done in <b class="k">three days</b>.</p>
+      <p class="beat" data-at="0.58">If AI is rated among the worst, it takes <em class="wait">thirty-three</em>.</p>
+      <p class="beat note" data-at="0.74">Medians of 663 tasks with 42&ndash;56 hours of work; best and worst fifth by AI rating.</p>
+    </div></div>
+  </section>
+
+  <section class="scene" data-scene="5" data-name="Sorted">
+    <div class="copy"><div class="inner">
+      <p class="beat big" data-at="0.06">Now line up every task by how well AI can do it.</p>
+      <p class="beat" data-at="0.3">Best on the left, worst on the right.</p>
+      <p class="beat" data-at="0.5">The <em class="wait">waiting</em> climbs.</p>
+    </div></div>
+  </section>
+
+  <section class="scene" data-scene="6" data-name="Any size">
+    <div class="copy"><div class="inner">
+      <p class="beat big" data-at="0.06">It holds for tasks of any size.</p>
+      <p class="beat" data-at="0.3">A day of work becomes <b class="k">1.1 days</b> on the calendar for the tenth of tasks AI does best&hellip;</p>
+      <p class="beat" data-at="0.52">&hellip;and <em class="wait">7.6 days</em> for the tenth it does worst.</p>
+    </div></div>
+  </section>
+
+  <section class="scene" data-scene="7" data-name="Verbs">
+    <div class="copy"><div class="inner">
+      <p class="beat big" data-at="0.06">The verbs give it away.</p>
+      <p class="beat" data-at="0.28">Tasks that start with <i>fit</i>, <i>calculate</i> or <i>process</i> wait a few hours.</p>
+      <p class="beat" data-at="0.5">Tasks that start with <i>obtain</i>, <i>coordinate</i> or <i>negotiate</i> wait <em class="wait">one to three months</em>.</p>
+    </div></div>
+  </section>
+
+  <section class="scene tall" data-scene="8" data-name="Waiting">
+    <div class="copy"><div class="inner">
+      <p class="beat big" data-at="0.04">What are they waiting for?</p>
+      <p class="beat" data-at="0.2">For a crystal to grow.</p>
+      <p class="beat" data-at="0.34">For patients to give samples.</p>
+      <p class="beat" data-at="0.48">For an archive, or a school board, to say yes.</p>
+      <p class="beat note" data-at="0.64">Getting approval to use the UK statistics office&rsquo;s secure microdata took a median of <b class="k">50 working days</b> last year, before any data arrived.<sup><a href="#n2">2</a></sup></p>
+    </div></div>
+  </section>
+
+  <section class="scene tall" data-scene="9" data-name="The wait">
+    <div class="copy"><div class="inner">
+      <p class="beat" data-at="0.06">AI is speeding up the clock that was <b class="k">already short</b>.</p>
+      <p class="beat" data-at="0.24">The clock that sets the pace of a paper is the one AI does worst, and most of its time goes on <em class="wait">waiting</em>.</p>
+      <p class="beat big keep" data-at="0.46">Faster science needs a shorter wait.</p>
+      <p class="beat note" data-at="0.64">Approvals, access, samples, and the people on the other side of them: problems for institutions more than for models.</p>
+    </div></div>
+  </section>
+
+  <footer class="notes" id="notes">
+    <div class="notes-inner">
+      <h2>Notes</h2>
+      <p><b>Data.</b> SciNet (Alamos and Althoff 2026), the tasks that go into papers in 318 subfields, CC BY 4.0. &ldquo;How well AI can do a task&rdquo; is SciNet&rsquo;s rating of how likely Claude Opus&nbsp;5 is to complete it. Hours of work and calendar time are SciNet&rsquo;s estimates for a typical instance of the task; a day of work is 24 hours of hands-on team time.</p>
+      <p><b>Robustness.</b> The link holds inside each of the six scientific domains, and within subfields at equal hours of work, where one standard deviation more on the AI rating goes with 60% less waiting.</p>
+      <p><b>The picture.</b> Every point of light is one of the 6,666 tasks. In the calendars the points are texture; the number of lit days is the median.</p>
+      <ol class="refs">
+        <li id="n1">OpenAI, <i>Science at the Frontier</i> (2026).</li>
+        <li id="n2">ONS Secure Research Service, October 2025 to September 2026.</li>
+      </ol>
+      <p class="end"><a href="https://github.com/aleetreny/one-week-one-month">Code and data on GitHub</a> <span>&middot;</span> <a href="#top">Back to the top</a></p>
+    </div>
+  </footer>
+</main>
+
+<noscript><style>.beat,.intro{opacity:1!important;transform:none!important;filter:none!important}</style></noscript>
+<script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

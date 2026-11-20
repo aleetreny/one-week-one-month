@@ -1,0 +1,6 @@
+.venv/
+.tools/
+_local/
+__pycache__/
+.DS_Store
+scratch/pdfs/
