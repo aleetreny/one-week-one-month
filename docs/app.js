@@ -258,7 +258,7 @@
   // hourglass; sand runs with scroll
   let sandF = 0;
   function glassLayout(L, p) {
-    const f = clamp((p - .12) / .72, 0, 1); sandF = f;
+    const f = clamp((p - .3) / .6, 0, 1); sandF = f;
     const Hh = mob ? H * .38 : H * .7, hh = Hh / 2, hw = Hh * .3, nw = 3, cx = FX, cy = FY;
     const halfw = d => nw + (hw - nw) * d / hh;
     const S = 2700, G = 1100, D0 = hh * .8, Dm = hh - 4;
@@ -321,14 +321,17 @@
 
   // ---------- overlays (axes, labels) ----------
   const MUTED = "178,183,193", TXT = "236,234,229", AMB = "242,166,59", WRK = "226,232,244";
-  const sans = (px, w = 400) => w >= 500 ? `${w} ${px}px "Bricolage Grotesque", sans-serif` : `${px + 2}px "Cutive Mono", monospace`;
-  const serif = (px, it = false) => it ? `italic ${Math.round(px * 1.15)}px "Instrument Serif", serif` : `700 ${px}px "Bricolage Grotesque", sans-serif`;
+  const sans = (px, w = 400) => `${w} ${px}px "Bricolage Grotesque", sans-serif`;
+  const serif = (px, it = false) => `${it ? 700 : 500} ${px}px "Bricolage Grotesque", sans-serif`;
   function txt(s, x, y, font, rgb, a, align = "left", base = "alphabetic") { ctx.font = font; ctx.fillStyle = `rgba(${rgb},${a})`; ctx.textAlign = align; ctx.textBaseline = base; ctx.fillText(s, x, y); }
   function line(x0, y0, x1, y1, rgb, a, w = 1, dash) { ctx.strokeStyle = `rgba(${rgb},${a})`; ctx.lineWidth = w; ctx.setLineDash(dash || []); ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); ctx.setLineDash([]); }
   let fs = 12;
 
   function ovSpeed(a) {
     const s = mob ? 34 : 64, Rr = FR * 1.05, y = FY + Rr * .5;
+    const g = ctx.createRadialGradient(FX, y, 0, FX, y, Rr * .42);
+    g.addColorStop(0, `rgba(10,12,16,${.92 * a})`); g.addColorStop(.6, `rgba(10,12,16,${.7 * a})`); g.addColorStop(1, "rgba(10,12,16,0)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(FX, y, Rr * .42, Rr * .26, 0, 0, TAU); ctx.fill();
     txt("2×", FX, y, serif(s), WRK, a * .95, "center", "alphabetic");
     txt("faster work, scientists say", FX, y + 12, sans(fs), MUTED, a * .85, "center", "top");
   }
@@ -575,7 +578,7 @@
   let skewV = 0;
 
   // HUD
-  const legend = document.getElementById("legend"), chapter = document.getElementById("chapter"), bar = document.getElementById("bar"), rail = document.getElementById("rail");
+  const chapter = document.getElementById("chapter"), bar = document.getElementById("bar"), rail = document.getElementById("rail");
   secs.forEach((s, i) => { const b = document.createElement("button"); b.innerHTML = "<i></i>"; b.title = s.dataset.name; b.setAttribute("aria-label", s.dataset.name); b.onclick = () => go(tops[i] + (i ? innerHeight * .2 : 0)); rail.appendChild(b); });
   const railBtns = [...rail.children];
   let lastChapter = -1;
@@ -583,7 +586,6 @@
     if (si !== lastChapter) {
       lastChapter = si; chapter.innerHTML = `${String(si + 1).padStart(2, "0")} &nbsp;${secs[si].dataset.name}`;
       railBtns.forEach((b, i) => b.classList.toggle("on", i === si));
-      legend.classList.toggle("on", si >= 2);
     }
     bar.style.transform = `scaleX(${clamp(y / (document.documentElement.scrollHeight - innerHeight), 0, 1)})`;
   }
