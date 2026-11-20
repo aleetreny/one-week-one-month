@@ -19,7 +19,8 @@ out = {
     # tasks per first verb, for the verbs shown in the paper (Figure 3)
     "verbs": s.task.str.split().str[0].str.lower().value_counts()
               .reindex(["fit", "calculate", "process", "analyze", "collect", "conduct", "obtain", "recruit", "coordinate", "negotiate"]).astype(int).to_dict(),
-    "band": s[band].groupby("q").days.median().round(2).tolist(),
+    # median waiting (days) by fifth, tasks with 42-56 hours of work (paper Figure 2)
+    "bandwait": (s.days - s.researcher_hours / 24)[band].groupby(s.q[band]).median().round(2).tolist(),
 }
 json.dump(out, open(f"{ROOT}/docs/data.json", "w"), separators=(",", ":"))
-print(len(out["t"]), out["qwait"], out["verbs"], out["band"])
+print(len(out["t"]), out["qwait"], out["verbs"], out["bandwait"])

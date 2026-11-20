@@ -1,4 +1,4 @@
-# The Waiting Is the Hardest Part — the scrolling version
+# AI Speeds the Work, Not the Wait — the scrolling version
 
 Static site served by GitHub Pages from `/docs`: https://aleetreny.github.io/one-week-one-month/
 

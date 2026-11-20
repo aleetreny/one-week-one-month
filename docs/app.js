@@ -22,9 +22,9 @@
   const [r1, r2, r3, r4, r5, r6] = R;
   const waitC = i => clamp(Math.log10(Math.max(ratio[i], 1)) / Math.log10(25), 0, 1);
 
-  // rank within domain / decile
-  const rankDom = new Int32Array(N), rankQ = new Int32Array(N), nDom = [0, 0, 0, 0, 0, 0], nQ = [0, 0, 0, 0, 0];
-  for (let i = 0; i < N; i++) { rankDom[i] = nDom[dom[i]]++; rankQ[i] = nQ[qn[i]]++; }
+  // rank within domain
+  const rankDom = new Int32Array(N), nDom = [0, 0, 0, 0, 0, 0];
+  for (let i = 0; i < N; i++) rankDom[i] = nDom[dom[i]]++;
 
   // calendar slots: left = best fifth (3 lit days), right = worst fifth (33 lit days); 6x6 points per day
   const PER = 36, LEFT_DAYS = 3, RIGHT_DAYS = 33;
@@ -222,19 +222,27 @@
       put(L, i, B.x0 + (1 - ai[i]) * B.w, cyy(Math.log10(waitD(i))) + (r6[i] - .5) * 2, waitC(i), .62, ps);
   }
   const qx = q => B.x0 + (1 - (q + .5) / 5) * B.w;   // centre of each fifth, best on the left
+  const QA = D.qwait.map(h => h / 24);                 // median waiting by fifth, all tasks (days)
 
-  // five bars: median waiting by fifth of AI rating (paper Figure 2)
-  const QW = D.qwait.map(h => h / 24), QMAX = 33;
-  const fmtWait = d => d * 24 < 20 ? `${Math.round(d * 24)} hours` : d < 2 ? `${d.toFixed(1)} days` : `${Math.round(d)} days`;
+  // five bars: median waiting by fifth of AI rating among tasks with ~50 hours of work (paper Figure 2)
+  const QW = D.bandwait, QMAX = 33;
+  const fmtWait = d => d < 1 ? `${Math.round(d * 24)} hours` : d < 2 ? `${d.toFixed(1)} days` : `${Math.round(d)} days`;
   function barGeo(q) {
-    const cw = B.w / 5, bw = cw * .62, x = B.x0 + (4 - q) * cw + (cw - bw) / 2, h = Math.max(3, QW[q] / QMAX * B.h);
+    const cw = B.w / 5, bw = cw * .62, x = B.x0 + (4 - q) * cw + (cw - bw) / 2, h = Math.max(4, QW[q] / QMAX * B.h);
     return { x, w: bw, h, top: B.y1 - h };
   }
+  const barOwn = [[], [], [], [], []], barPool = [];
+  for (let i = 0; i < N; i++) (band[i] ? barOwn[qn[i]] : barPool).push(i);
   function barsLayout(L) {
-    for (let i = 0; i < N; i++) {
-      const q = qn[i], g = barGeo(q), n = nQ[q], cols = Math.max(2, Math.round(Math.sqrt(n * g.w / g.h))), rows = Math.ceil(n / cols);
-      const k = rankQ[i], col = k % cols, row = Math.floor(k / cols);
-      put(L, i, g.x + (col + .5) * g.w / cols, B.y1 - (row + .5) / rows * g.h, 1, .88, mob ? 1.15 : 1.5);
+    for (let i = 0; i < N; i++) dust(L, i);
+    const sp = mob ? 3.4 : 4.2; let pool = 0;
+    for (let q = 0; q < 5; q++) {
+      const g = barGeo(q), cols = Math.max(1, Math.floor(g.w / sp)), rows = Math.max(1, Math.floor(g.h / sp)), own = barOwn[q];
+      for (let k = 0; k < Math.max(cols * rows, own.length); k++) {
+        const i = k < own.length ? own[k] : barPool[pool++]; if (i === undefined) break;
+        const kk = k % (cols * rows);
+        put(L, i, g.x + ((kk % cols) + .5) / cols * g.w, B.y1 - (Math.floor(kk / cols) + .5) / rows * g.h, 1, .9, mob ? 1.3 : 1.7);
+      }
     }
   }
 
@@ -379,25 +387,24 @@
     }
     const ac = a * clamp((p - .4) / .14, 0, 1);
     if (ac < .01) return;
-    const g = calGeo, DOW = ["M", "T", "W", "T", "F", "S", "S"];
-    const nov = d => d < 29 ? [`${d + 2}`] : [`${d - 28}`];
+    const g = calGeo;
+    const dayN = d => `${d + 1}`;
     [0, 1].forEach(side => {
       const x0 = g.xs[side];
       for (let d = 0; d < 35; d++) {
         const cx = x0 + (d % 7) * g.cell, cy = g.y0 + Math.floor(d / 7) * g.cell;
         ctx.strokeStyle = `rgba(${MUTED},${ac * .16})`; ctx.lineWidth = 1; ctx.strokeRect(cx + .5, cy + .5, g.cell - 1, g.cell - 1);
         const lit = d < (side ? RIGHT_DAYS : LEFT_DAYS);
-        if (!lit && g.cell > 22) txt(nov(d)[0], cx + 4, cy + 4, sans(Math.min(10, g.cell * .3)), MUTED, ac * .45, "left", "top");
+        if (!lit && g.cell > 22) txt(dayN(d), cx + 4, cy + 4, sans(Math.min(10, g.cell * .3)), MUTED, ac * .45, "left", "top");
       }
-      if (g.cell > 18) DOW.forEach((s, j) => txt(s, x0 + (j + .5) * g.cell, g.y0 - 8, sans(fs - 1), MUTED, ac * .6, "center", "bottom"));
-      const hy = g.y0 - (g.cell > 18 ? 30 + fs : 12);
+      const hy = g.y0 - 12;
       txt(side ? "Grow a crystal for a physics experiment" : "Fit a statistical model of the climate", x0, hy - fs - 10, sans(fs + 1, 600), TXT, ac * .95, "left", "bottom");
       txt(side ? "a task AI does badly" : "a task AI does well", x0, hy, sans(fs), side ? AMB : MUTED, ac * .9, "left", "bottom");
       const ny = g.y0 + 5 * g.cell + 14;
       const big = mob ? 30 : 46;
       txt(side ? "33 days" : "3 days", x0, ny, serif(big), side ? AMB : WRK, ac, "left", "top");
       txt(side ? "51 h of work, 30 days waiting" : "50 h of work, 14 h waiting", x0, ny + big + 10, sans(fs), MUTED, ac * .85, "left", "top");
-      txt(side ? "done Friday 4 December" : "done Wednesday 4 November", x0, ny + big + 18 + fs, sans(fs), MUTED, ac * .6, "left", "top");
+      txt(side ? "done on day 33" : "done on day 3", x0, ny + big + 18 + fs, sans(fs), MUTED, ac * .6, "left", "top");
     });
   }
   function ovCloud(a) {
@@ -410,10 +417,10 @@
     txt("↑ time spent waiting", B.x0 - 6, B.y0 - 16, sans(fs, 500), TXT, a * .8, "left", "bottom");
     // median of each fifth
     ctx.strokeStyle = `rgba(${AMB},${a * .9})`; ctx.lineWidth = 2; ctx.beginPath();
-    QW.forEach((v, q) => { const x = qx(q), y = cyy(Math.log10(v)); q ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+    QA.forEach((v, q) => { const x = qx(q), y = cyy(Math.log10(v)); q ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
     ctx.stroke();
-    QW.forEach((v, q) => { const x = qx(q), y = cyy(Math.log10(v)); ctx.fillStyle = `rgba(${AMB},${a})`; ctx.beginPath(); ctx.arc(x, y, 4, 0, TAU); ctx.fill(); });
-    txt("typical task", qx(0) - 10, cyy(Math.log10(QW[0])) - 12, serif(mob ? 14 : 17, true), AMB, a * .9, "right", "bottom");
+    QA.forEach((v, q) => { const x = qx(q), y = cyy(Math.log10(v)); ctx.fillStyle = `rgba(${AMB},${a})`; ctx.beginPath(); ctx.arc(x, y, 4, 0, TAU); ctx.fill(); });
+    txt("typical task", qx(0) - 10, cyy(Math.log10(QA[0])) - 12, serif(mob ? 14 : 17, true), AMB, a * .9, "right", "bottom");
   }
   function ovBars(a) {
     line(B.x0, B.y1 + 6, B.x1, B.y1 + 6, MUTED, a * .35);
@@ -423,7 +430,7 @@
     });
     txt("AI does it best", B.x0, B.y1 + 14, sans(fs, 500), TXT, a * .8, "left", "top");
     txt("AI does it worst", B.x1, B.y1 + 14, sans(fs, 500), TXT, a * .8, "right", "top");
-    if (!mob) txt("typical waiting, five equal groups of tasks", B.x0, B.y0 - 30, sans(fs, 500), TXT, a * .8, "left", "bottom");
+    if (!mob) txt("typical waiting, tasks with about 50 hours of work", B.x0, B.y0 - 30, sans(fs, 500), TXT, a * .8, "left", "bottom");
   }
   function ovVerbs(a) {
     const PAPER = ["4 hours", "5 hours", "8 hours", "2 days", "9 days", "27 days", "33 days", "68 days", "78 days", "79 days"];
