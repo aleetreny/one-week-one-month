@@ -1,0 +1,219 @@
+{
+ "sample": {
+  "paper_tasks": 6666,
+  "subfields": 318
+ },
+ "median_wait_by_AI_fifth_hours (4=best, 0=worst)": {
+  "0": 761.2,
+  "1": 146.9,
+  "2": 87.7,
+  "3": 38.5,
+  "4": 3.7
+ },
+ "median_hands_on_by_AI_fifth_hours": {
+  "0": 138.0,
+  "1": 101.0,
+  "2": 66.0,
+  "3": 42.0,
+  "4": 19.0
+ },
+ "tasks_with_42_56_hands_on_hours": {
+  "median_wait_days": {
+   "0": 30.83,
+   "1": 7.48,
+   "2": 3.04,
+   "3": 1.87,
+   "4": 0.92
+  },
+  "median_days_start_to_finish": {
+   "0": 32.8,
+   "1": 9.62,
+   "2": 5.04,
+   "3": 3.94,
+   "4": 2.91
+  },
+  "n": {
+   "0": 81,
+   "1": 84,
+   "2": 172,
+   "3": 235,
+   "4": 91
+  }
+ },
+ "share_of_world_hands_on_work_by_fifth": {
+  "0": 0.311,
+  "1": 0.23,
+  "2": 0.184,
+  "3": 0.151,
+  "4": 0.124
+ },
+ "share_of_world_waiting_by_fifth": {
+  "0": 0.494,
+  "1": 0.206,
+  "2": 0.17,
+  "3": 0.086,
+  "4": 0.044
+ },
+ "median_wait_days_by_first_verb": {
+  "fit": 0.17,
+  "calculate": 0.2,
+  "process": 0.35,
+  "analyze": 1.87,
+  "collect": 8.7,
+  "conduct": 27.39,
+  "obtain": 33.09,
+  "recruit": 68.19,
+  "coordinate": 78.47,
+  "negotiate": 79.33
+ },
+ "median_wait_days_worst_vs_best_fifth_by_domain": {
+  "Arts & Humanities": {
+   "worst_days": 22.97,
+   "best_hours": 3.0
+  },
+  "Formal Sciences": {
+   "worst_days": 2.17,
+   "best_hours": 4.7
+  },
+  "Health Sciences": {
+   "worst_days": 43.79,
+   "best_hours": 8.4
+  },
+  "Life Sciences": {
+   "worst_days": 29.66,
+   "best_hours": 3.4
+  },
+  "Physical Sciences": {
+   "worst_days": 5.72,
+   "best_hours": 3.7
+  },
+  "Social Sciences": {
+   "worst_days": 53.57,
+   "best_hours": 3.1
+  }
+ },
+ "examples": {
+  "Fit statistical downscaling models to relate large-scale climate patterns to local weather variables.": {
+   "subfield": "Atmospheric Science & Meteorology",
+   "researcher_hours": 49.67,
+   "wait_days": 0.58,
+   "days": 2.65,
+   "elo_opus5": 1951.5,
+   "q": 4
+  },
+  "Implement event study methodology to measure abnormal returns around corporate announcements or policy changes.": {
+   "subfield": "Finance & Financial Economics",
+   "researcher_hours": 48.5,
+   "wait_days": 0.31,
+   "days": 2.33,
+   "elo_opus5": 2252.8,
+   "q": 4
+  },
+  "Process raw GPS trajectories to extract trip segments, travel times, and route choices.": {
+   "subfield": "Transportation Engineering",
+   "researcher_hours": 49.83,
+   "wait_days": 0.48,
+   "days": 2.56,
+   "elo_opus5": 1885.6,
+   "q": 4
+  },
+  "Solve nonlinear algebraic or differential systems arising from discretization by iterative linearization.": {
+   "subfield": "Numerical Analysis & Scientific Computing",
+   "researcher_hours": 51.97,
+   "wait_days": 0.4,
+   "days": 2.57,
+   "elo_opus5": 2135.7,
+   "q": 4
+  },
+  "Construct genetic or physical marker maps to localize loci and anchor genome assemblies.": {
+   "subfield": "Bioinformatics & Computational Biology",
+   "researcher_hours": 44.58,
+   "wait_days": 1.22,
+   "days": 3.08,
+   "elo_opus5": 2039.0,
+   "q": 4
+  },
+  "Obtain tissue samples from marine organisms for genetic, histological, or biochemical analyses.": {
+   "subfield": "Marine Biology",
+   "researcher_hours": 47.13,
+   "wait_days": 29.84,
+   "days": 31.8,
+   "elo_opus5": 865.4,
+   "q": 0
+  },
+  "Grow single crystals using flux, Bridgman, or floating zone techniques for bulk property measurements.": {
+   "subfield": "Condensed Matter Physics",
+   "researcher_hours": 50.95,
+   "wait_days": 30.28,
+   "days": 32.41,
+   "elo_opus5": 981.9,
+   "q": 0
+  },
+  "Collect ocular tissue samples, aqueous humor, or tear fluid for laboratory analysis.": {
+   "subfield": "Ophthalmology & Otolaryngology",
+   "researcher_hours": 50.42,
+   "wait_days": 31.46,
+   "days": 33.56,
+   "elo_opus5": 572.3,
+   "q": 0
+  },
+  "Acquire archival materials from ecclesiastical repositories, diocesan archives, or religious order collections.": {
+   "subfield": "Religious History",
+   "researcher_hours": 44.52,
+   "wait_days": 33.29,
+   "days": 35.15,
+   "elo_opus5": 802.9,
+   "q": 0
+  },
+  "Gather conversational or discourse data through recordings of natural language interactions.": {
+   "subfield": "Semantics & Pragmatics",
+   "researcher_hours": 53.95,
+   "wait_days": 45.7,
+   "days": 47.95,
+   "elo_opus5": 809.2,
+   "q": 0
+  }
+ },
+ "regressions": {
+  "subfield_fe_hours": {
+   "pct_change_per_sd": -60.2,
+   "ci95": [
+    -63.8,
+    -56.2
+   ]
+  },
+  "plus_physical_people": {
+   "pct_change_per_sd": -36.8,
+   "ci95": [
+    -42.4,
+    -30.8
+   ]
+  },
+  "calendar_to_work_ratio_by_domain": {
+   "Arts & Humanities": {
+    "coef_z": -0.864,
+    "t": -13.1
+   },
+   "Formal Sciences": {
+    "coef_z": -0.214,
+    "t": -2.0
+   },
+   "Health Sciences": {
+    "coef_z": -0.317,
+    "t": -6.4
+   },
+   "Life Sciences": {
+    "coef_z": -0.506,
+    "t": -10.0
+   },
+   "Physical Sciences": {
+    "coef_z": -0.258,
+    "t": -9.1
+   },
+   "Social Sciences": {
+    "coef_z": -0.988,
+    "t": -29.7
+   }
+  }
+ }
+}
