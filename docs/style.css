@@ -76,7 +76,6 @@ main { position: relative; z-index: 2; }
 b.k { font-weight: inherit; color: #fff; text-shadow: 0 0 22px rgba(226,232,244,.35); }
 .beat.note b.k { font-weight: 600; text-shadow: none; }
 em.wait { font-style: normal; font-weight: 700; color: var(--wait); text-shadow: 0 0 26px rgba(242,166,59,.45); }
-.work { color: #fff; }
 .beat i { font-style: normal; font-weight: 600; color: #fff; }
 
 /* ---------- hero ---------- */

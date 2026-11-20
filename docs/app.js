@@ -9,13 +9,13 @@
 
   // ---------- per-task attributes ----------
   const hours = new Float32Array(N), days = new Float32Array(N), ai = new Float32Array(N),
-        dec = new Uint8Array(N), qn = new Uint8Array(N), dom = new Uint8Array(N), band = new Uint8Array(N),
+        qn = new Uint8Array(N), dom = new Uint8Array(N), band = new Uint8Array(N),
         ratio = new Float32Array(N);
   const R = [0, 1, 2, 3, 4, 5].map(() => new Float32Array(N));   // per-particle random constants
   let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   for (let i = 0; i < N; i++) {
     const t = T[i];
-    hours[i] = t[0]; days[i] = t[1]; ai[i] = t[2]; dec[i] = t[3]; qn[i] = t[4]; dom[i] = t[5]; band[i] = t[6];
+    hours[i] = t[0]; days[i] = t[1]; ai[i] = t[2]; qn[i] = t[3]; dom[i] = t[4]; band[i] = t[5];
     ratio[i] = days[i] / (hours[i] / 24);
     for (const r of R) r[i] = rnd();
   }
@@ -23,8 +23,8 @@
   const waitC = i => clamp(Math.log10(Math.max(ratio[i], 1)) / Math.log10(25), 0, 1);
 
   // rank within domain / decile
-  const rankDom = new Int32Array(N), rankDec = new Int32Array(N), nDom = [0, 0, 0, 0, 0, 0], nDec = new Array(10).fill(0);
-  for (let i = 0; i < N; i++) { rankDom[i] = nDom[dom[i]]++; rankDec[i] = nDec[dec[i]]++; }
+  const rankDom = new Int32Array(N), rankQ = new Int32Array(N), nDom = [0, 0, 0, 0, 0, 0], nQ = [0, 0, 0, 0, 0];
+  for (let i = 0; i < N; i++) { rankDom[i] = nDom[dom[i]]++; rankQ[i] = nQ[qn[i]]++; }
 
   // calendar slots: left = best fifth (3 lit days), right = worst fifth (33 lit days); 6x6 points per day
   const PER = 36, LEFT_DAYS = 3, RIGHT_DAYS = 33;
@@ -38,13 +38,12 @@
     right.forEach((i, k) => slot[i] = LEFT_DAYS * PER + k);
   }
 
-  // verbs (median days of waiting, number of tasks) from the paper's verb table
-  const VERBS = [["fit", .17, 91], ["calculate", .2, 70], ["process", .35, 47], ["measure", .45, 115], ["analyze", 1.87, 223],
-    ["collect", 8.7, 167], ["design", 14.51, 519], ["conduct", 27.39, 183], ["obtain", 33.09, 109], ["coordinate", 78.47, 104], ["negotiate", 79.33, 45]];
+  // verbs (median days of waiting, number of tasks), as in the paper's Figure 3
+  const VERBS = [["fit", .17], ["calculate", .2], ["process", .35], ["analyze", 1.87], ["collect", 8.7],
+    ["conduct", 27.39], ["obtain", 33.09], ["recruit", 68.19], ["coordinate", 78.47], ["negotiate", 79.33]].map(([v, w]) => [v, w, D.verbs[v]]);
   const verbOf = new Int16Array(N).fill(-1);
   { let k = 0; VERBS.forEach((v, j) => { for (let m = 0; m < v[2]; m++) verbOf[k++] = j; }); }
-  const VERB_END = VERBS.reduce((s, v) => s + v[2], 0);
-
+  
   // ---------- canvas ----------
   const cv = document.getElementById("stage"), ctx = cv.getContext("2d");
   let W, H, DPR, mob, B, FX, FY, FR;
@@ -213,46 +212,54 @@
   }
   function copyL(D_, S) { D_.x.set(S.x); D_.y.set(S.y); D_.c.set(S.c); D_.a.set(S.a); D_.s.set(S.s); }
 
-  // cloud: AI rating (best left) vs calendar days per day of work
-  const CY = [-0.45, 2.1];
+  // cloud: AI rating (best left) vs days of waiting (log)
+  const CY = [-2, 2.75];
+  const waitD = i => Math.max(days[i] - hours[i] / 24, .01);
   const cyy = v => B.y1 - (clamp(v, CY[0], CY[1]) - CY[0]) / (CY[1] - CY[0]) * B.h;
   function cloudLayout(L) {
     const ps = mob ? 1.1 : 1.4;
     for (let i = 0; i < N; i++)
-      put(L, i, B.x0 + (1 - ai[i]) * B.w, cyy(Math.log10(ratio[i])) + (r6[i] - .5) * 1.5, waitC(i), .62, ps);
+      put(L, i, B.x0 + (1 - ai[i]) * B.w, cyy(Math.log10(waitD(i))) + (r6[i] - .5) * 2, waitC(i), .62, ps);
   }
+  const qx = q => B.x0 + (1 - (q + .5) / 5) * B.w;   // centre of each fifth, best on the left
 
-  // ten bars: calendar days per day of work, median by tenth of AI rating
-  const DEC = D.deciles, DMAX = 8.2;
-  function barGeo(d) {
-    const col = 9 - d, cw = B.w / 10, bw = cw * .64, x = B.x0 + col * cw + (cw - bw) / 2, h = DEC[d] / DMAX * B.h;
+  // five bars: median waiting by fifth of AI rating (paper Figure 2)
+  const QW = D.qwait.map(h => h / 24), QMAX = 33;
+  const fmtWait = d => d * 24 < 20 ? `${Math.round(d * 24)} hours` : d < 2 ? `${d.toFixed(1)} days` : `${Math.round(d)} days`;
+  function barGeo(q) {
+    const cw = B.w / 5, bw = cw * .62, x = B.x0 + (4 - q) * cw + (cw - bw) / 2, h = Math.max(3, QW[q] / QMAX * B.h);
     return { x, w: bw, h, top: B.y1 - h };
   }
   function barsLayout(L) {
     for (let i = 0; i < N; i++) {
-      const d = dec[i], g = barGeo(d), n = nDec[d], cols = Math.max(2, Math.round(Math.sqrt(n * g.w / g.h))), rows = Math.ceil(n / cols);
-      const k = rankDec[i], col = k % cols, row = Math.floor(k / cols), fy = (row + .5) / rows;
-      put(L, i, g.x + (col + .5) * g.w / cols, B.y1 - fy * g.h, fy * DEC[d] < 1 ? 0 : 1, .88, mob ? 1.15 : 1.5);
+      const q = qn[i], g = barGeo(q), n = nQ[q], cols = Math.max(2, Math.round(Math.sqrt(n * g.w / g.h))), rows = Math.ceil(n / cols);
+      const k = rankQ[i], col = k % cols, row = Math.floor(k / cols);
+      put(L, i, g.x + (col + .5) * g.w / cols, B.y1 - (row + .5) / rows * g.h, 1, .88, mob ? 1.15 : 1.5);
     }
   }
 
-  // verbs on a log axis of waiting
-  const VX = [Math.log10(1 / 24), 2.05];
-  const vx = d => B.x0 + (Math.log10(d) - VX[0]) / (VX[1] - VX[0]) * B.w;
-  const VY = () => B.y0 + B.h * .5;
+  // verbs: one bar per first word, ranked by typical waiting (paper Figure 3); each bar is filled with that verb's tasks
+  const VMAX = 82, VLAB = () => (mob ? 84 : 118);
+  function verbGeo(j) {
+    const rh = B.h / VERBS.length, bh = rh * .56, x = B.x0 + VLAB(), maxW = B.w - VLAB() - (mob ? 56 : 84);
+    return { x, y: B.y0 + j * rh + (rh - bh) / 2, w: Math.max(3, VERBS[j][1] / VMAX * maxW), h: bh };
+  }
+  const verbC = j => clamp(Math.log10(VERBS[j][1] * 24) / Math.log10(24 * 40), 0, 1);
+  // each bar takes its own verb's tasks first, then spare dots as texture until it is full
+  const verbOwn = VERBS.map(() => []), verbPool = [];
+  for (let i = 0; i < N; i++) (verbOf[i] >= 0 ? verbOwn[verbOf[i]] : verbPool).push(i);
   function verbLayout(L) {
-    const y0 = VY();
-    for (let i = 0; i < N; i++) {
-      const j = verbOf[i];
-      if (j >= 0) {
-        const v = VERBS[j], rad = 3 + Math.sqrt(v[2]) * (mob ? .55 : .85);
-        const g = Math.sqrt(-2 * Math.log(r1[i] + 1e-6)) * .5, th = r2[i] * TAU;
-        const x = vx(v[1]) + Math.cos(th) * g * rad, f = (x - B.x0) / B.w;
-        put(L, i, x, y0 + Math.sin(th) * g * rad, clamp(f * 1.25 - .15, 0, 1), .9, mob ? 1.2 : 1.5);
-      } else if (i < VERB_END + 900) {
-        const f = r1[i]; put(L, i, B.x0 + f * B.w, y0 + (r2[i] - .5) * 1.6, clamp(f * 1.25 - .15, 0, 1), .5, 1.1);
-      } else dust(L, i);
-    }
+    for (let i = 0; i < N; i++) dust(L, i);
+    const sp = mob ? 3.2 : 3.8; let pool = 0;
+    VERBS.forEach((v, j) => {
+      const g = verbGeo(j), cols = Math.max(1, Math.floor(g.w / sp)), rows = Math.max(1, Math.floor(g.h / sp)), slots = cols * rows;
+      const own = verbOwn[j], c = verbC(j);
+      for (let k = 0; k < slots; k++) {
+        const i = k < own.length ? own[k] : verbPool[pool++]; if (i === undefined) break;
+        put(L, i, g.x + ((k % cols) + .5) / cols * g.w, g.y + (Math.floor(k / cols) + .5) / rows * g.h, c, .9, mob ? 1.3 : 1.7);
+      }
+      for (let k = slots; k < own.length; k++) { const i = own[k]; put(L, i, g.x + r1[i] * g.w, g.y + r2[i] * g.h, c, .9, mob ? 1.3 : 1.7); }
+    });
   }
 
   // hourglass; sand runs with scroll
@@ -368,7 +375,7 @@
       axesScatter(aSc);
       const xa = sx(Math.log10(42)), xb = sx(Math.log10(56));
       ctx.fillStyle = `rgba(${WRK},${aSc * hl * .06})`; ctx.fillRect(xa - 3, B.y0, xb - xa + 6, B.h);
-      txt("≈ one week of work", (xa + xb) / 2, B.y0 - 6, serif(mob ? 15 : 19, true), WRK, aSc * hl, "center", "bottom");
+      txt("≈ 50 hours of work", (xa + xb) / 2, B.y0 - 6, serif(mob ? 15 : 19, true), WRK, aSc * hl, "center", "bottom");
     }
     const ac = a * clamp((p - .4) / .14, 0, 1);
     if (ac < .01) return;
@@ -383,56 +390,50 @@
         if (!lit && g.cell > 22) txt(nov(d)[0], cx + 4, cy + 4, sans(Math.min(10, g.cell * .3)), MUTED, ac * .45, "left", "top");
       }
       if (g.cell > 18) DOW.forEach((s, j) => txt(s, x0 + (j + .5) * g.cell, g.y0 - 8, sans(fs - 1), MUTED, ac * .6, "center", "bottom"));
-      const head = side ? "AI rated among the worst" : "AI rated among the best";
-      txt(head, x0, g.y0 - (g.cell > 18 ? 26 + fs : 10), sans(fs, 600), TXT, ac * .9, "left", "bottom");
+      const hy = g.y0 - (g.cell > 18 ? 30 + fs : 12);
+      txt(side ? "Grow a crystal for a physics experiment" : "Fit a statistical model of the climate", x0, hy - fs - 10, sans(fs + 1, 600), TXT, ac * .95, "left", "bottom");
+      txt(side ? "a task AI does badly" : "a task AI does well", x0, hy, sans(fs), side ? AMB : MUTED, ac * .9, "left", "bottom");
       const ny = g.y0 + 5 * g.cell + 14;
       const big = mob ? 30 : 46;
       txt(side ? "33 days" : "3 days", x0, ny, serif(big), side ? AMB : WRK, ac, "left", "top");
-      txt(side ? "Mon 2 Nov → Fri 4 Dec" : "Mon 2 Nov → Wed 4 Nov", x0, ny + big + 4, sans(fs), MUTED, ac * .85, "left", "top");
+      txt(side ? "51 h of work, 30 days waiting" : "50 h of work, 14 h waiting", x0, ny + big + 10, sans(fs), MUTED, ac * .85, "left", "top");
+      txt(side ? "done Friday 4 December" : "done Wednesday 4 November", x0, ny + big + 18 + fs, sans(fs), MUTED, ac * .6, "left", "top");
     });
   }
   function ovCloud(a) {
     line(B.x0, B.y1 + 8, B.x1, B.y1 + 8, MUTED, a * .35);
     txt("AI does it best", B.x0, B.y1 + 16, sans(fs, 500), TXT, a * .8, "left", "top");
     txt("AI does it worst", B.x1, B.y1 + 16, sans(fs, 500), TXT, a * .8, "right", "top");
-    [[0, "1 day"], [Math.log10(3), "3"], [1, "10"], [Math.log10(30), "30"], [2, "100"]].forEach(([v, s]) => {
-      txt(s, B.x0 - 12, cyy(v), sans(fs), MUTED, a, "right", "middle"); line(B.x0 - 6, cyy(v), B.x1, cyy(v), MUTED, a * (v === 0 ? .35 : .07), 1, v === 0 ? [4, 5] : null);
+    [[Math.log10(1 / 24), "1 hour"], [0, "1 day"], [Math.log10(7), "1 week"], [Math.log10(30), "1 month"], [Math.log10(365), "1 year"]].forEach(([v, s]) => {
+      txt(s, B.x0 - 12, cyy(v), sans(fs), MUTED, a, "right", "middle"); line(B.x0 - 6, cyy(v), B.x1, cyy(v), MUTED, a * .07);
     });
-    txt("↑ calendar days per day of work", B.x0 - 6, B.y0 - 16, sans(fs, 500), TXT, a * .8, "left", "bottom");
-    // decile medians
+    txt("↑ time spent waiting", B.x0 - 6, B.y0 - 16, sans(fs, 500), TXT, a * .8, "left", "bottom");
+    // median of each fifth
     ctx.strokeStyle = `rgba(${AMB},${a * .9})`; ctx.lineWidth = 2; ctx.beginPath();
-    DEC.forEach((v, d) => { const x = B.x0 + (1 - (d + .5) / 10) * B.w, y = cyy(Math.log10(v)); d ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+    QW.forEach((v, q) => { const x = qx(q), y = cyy(Math.log10(v)); q ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
     ctx.stroke();
-    DEC.forEach((v, d) => { const x = B.x0 + (1 - (d + .5) / 10) * B.w, y = cyy(Math.log10(v)); ctx.fillStyle = `rgba(${AMB},${a})`; ctx.beginPath(); ctx.arc(x, y, 3.2, 0, TAU); ctx.fill(); });
-    txt("median", B.x0 + .95 * B.w - 12, cyy(Math.log10(DEC[0])) - 4, serif(mob ? 15 : 18, true), AMB, a * .9, "right", "bottom");
+    QW.forEach((v, q) => { const x = qx(q), y = cyy(Math.log10(v)); ctx.fillStyle = `rgba(${AMB},${a})`; ctx.beginPath(); ctx.arc(x, y, 4, 0, TAU); ctx.fill(); });
+    txt("typical task", qx(0) - 10, cyy(Math.log10(QW[0])) - 12, serif(mob ? 14 : 17, true), AMB, a * .9, "right", "bottom");
   }
   function ovBars(a) {
     line(B.x0, B.y1 + 6, B.x1, B.y1 + 6, MUTED, a * .35);
-    const y1 = B.y1 - 1 / DMAX * B.h;
-    line(B.x0, y1, B.x1, y1, WRK, a * .5, 1, [4, 5]);
-    txt(mob ? "1 day" : "one day of work", B.x0 - 10, y1, serif(mob ? 13 : 18, true), WRK, a * .85, "right", "middle");
-    DEC.forEach((v, d) => {
-      const g = barGeo(d), lab = v.toFixed(1), ext = d === 0 || d === 9;
-      txt(lab, g.x + g.w / 2, g.top - 8, ext ? serif(mob ? 22 : 34) : sans(fs), d === 0 ? AMB : ext ? WRK : MUTED, a * (ext ? 1 : .8), "center", "bottom");
+    QW.forEach((v, q) => {
+      const g = barGeo(q), ext = q === 0 || q === 4;
+      txt(fmtWait(v), g.x + g.w / 2, g.top - 10, ext ? serif(mob ? 20 : 32) : sans(fs + 1, 500), q === 0 ? AMB : ext ? WRK : TXT, a * (ext ? 1 : .85), "center", "bottom");
     });
-    txt("Best tenth for AI", B.x0, B.y1 + 14, sans(fs, 500), TXT, a * .8, "left", "top");
-    txt("Worst tenth", B.x1, B.y1 + 14, sans(fs, 500), TXT, a * .8, "right", "top");
-    if (!mob) txt("calendar days per day of hands-on work, median", B.x0, B.y0 - 30, sans(fs, 500), TXT, a * .8, "left", "bottom");
+    txt("AI does it best", B.x0, B.y1 + 14, sans(fs, 500), TXT, a * .8, "left", "top");
+    txt("AI does it worst", B.x1, B.y1 + 14, sans(fs, 500), TXT, a * .8, "right", "top");
+    if (!mob) txt("typical waiting, five equal groups of tasks", B.x0, B.y0 - 30, sans(fs, 500), TXT, a * .8, "left", "bottom");
   }
   function ovVerbs(a) {
-    const y0 = VY();
-    [[1 / 24, "1 hour"], [1, "1 day"], [7, "1 week"], [30, "1 month"], [91, "3 months"]].forEach(([d, s]) => {
-      const x = vx(d); line(x, y0 - 6, x, y0 + 6, MUTED, a * .6); txt(s, x, B.y1 + 4, sans(fs), MUTED, a * .9, "center", "top");
-      line(x, y0 + 10, x, B.y1, MUTED, a * .08);
-    });
-    txt("typical waiting, by the task's first verb →", B.x1, B.y1 + 10 + fs + 10, sans(fs, 500), TXT, a * .8, "right", "top");
-    const tiers = mob ? [-.42, .3, -.27, .44] : [-.36, .26, -.2, .4];
+    const PAPER = ["4 hours", "5 hours", "8 hours", "2 days", "9 days", "27 days", "33 days", "68 days", "78 days", "79 days"];
     VERBS.forEach((v, j) => {
-      const x = vx(v[1]), f = clamp(((x - B.x0) / B.w) * 1.25 - .15, 0, 1), dy = tiers[j % 4] * B.h * .5 * 1.6;
-      const rgb = f > .5 ? AMB : WRK, size = (mob ? 14 : 19) + f * (mob ? 6 : 12);
-      line(x, y0 + Math.sign(dy) * 14, x, y0 + dy - Math.sign(dy) * (size * .2), rgb, a * .25);
-      txt(v[0], x, y0 + dy, serif(size, true), rgb, a, "center", dy < 0 ? "bottom" : "top");
+      const g = verbGeo(j), cy = g.y + g.h / 2, f = verbC(j), rgb = f > .55 ? AMB : WRK;
+      txt(v[0], g.x - 16, cy, sans(mob ? 13 : 17, 600), TXT, a, "right", "middle");
+      txt(PAPER[j], g.x + g.w + 12, cy, sans(mob ? 12 : 15, f > .55 ? 600 : 500), rgb, a * (f > .55 ? 1 : .85), "left", "middle");
     });
+    line(B.x0 + VLAB() - .5, B.y0, B.x0 + VLAB() - .5, B.y1, MUTED, a * .3);
+    if (!mob) txt("typical waiting, by the first word of the task", B.x0 + VLAB(), B.y0 - 18, sans(fs, 500), TXT, a * .8, "left", "bottom");
   }
   function ovGlass(a) {
     const Hh = mob ? H * .38 : H * .7, hw = Hh * .3, x = mob ? FX + hw + 26 : FX + hw + 48;
