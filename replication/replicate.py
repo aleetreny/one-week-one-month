@@ -178,7 +178,16 @@ def figures(s, res, D, out):
     cal = s.set_index("task").loc[list(CALENDAR), ["subfield", "researcher_hours", "wait_days", "days"]]
     cal.to_csv(f"{out}/fig_calendar_tasks.csv")
 
-    # Work vs waiting shares by AI fifth (two-column version, Figure 2)
+    # Typical waiting by AI fifth (two-column version, Figure 2)
+    m = pd.Series(res["median_wait_by_AI_fifth_hours (4=best, 0=worst)"]).reindex([4, 3, 2, 1, 0]) / 24
+    fig, ax = plt.subplots(figsize=(3.3, 1.6)); x = np.arange(5)
+    ax.bar(x, m.values, facecolor=TINT, edgecolor=AMB, hatch="////", lw=0, width=.6)
+    for xi, v in zip(x, m.values):
+        ax.text(xi, v + .9, f"{v*24:.0f} hours" if v < 1 else (f"{v:.1f} days" if v < 2 else f"{v:.0f} days"), ha="center", fontsize=7.8)
+    ax.set_xticks(x); ax.set_xticklabels(["AI does\nbest", "", "", "", "AI does\nworst"]); ax.set_yticks([]); clean(ax)
+    plt.tight_layout(pad=.3); fig.savefig(f"{out}/fig_waiting_by_ai_fifth.png", dpi=200); plt.close(fig)
+
+    # Share of all hands-on work vs all waiting by AI fifth (quoted in the text: a third of the work, half of the waiting)
     work = pd.Series(res["share_of_world_hands_on_work_by_fifth"]).reindex([4, 3, 2, 1, 0])
     wait = pd.Series(res["share_of_world_waiting_by_fifth"]).reindex([4, 3, 2, 1, 0])
     fig, ax = plt.subplots(figsize=(3.3, 1.8)); x = np.arange(5); bw = .36
