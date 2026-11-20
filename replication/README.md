@@ -33,6 +33,7 @@ Runs in under a minute. Outputs go to `output/`:
 - **Waiting**: `elapsed_hours - researcher_hours`, i.e. calendar time from start to finish minus hands-on time (SciNet runs a task's steps back to back).
 - **Shares of all work and waiting** ("a third of the hands-on work but half of the waiting"): each task is weighted by how many times a researcher does it per year (`hours_per_year / hours_per_instance`) and by the number of researchers in its subfield worldwide (`researchers.csv`).
 - **Robustness**: log waiting hours on the standardised AI rating with subfield fixed effects and log hands-on hours, standard errors clustered by subfield (−60% per SD, 95% CI −64 to −56); adding physical deployment and people-facing work (−37%). The ratio of calendar time to hands-on time falls with the AI rating in all six domains.
+- **Circularity check**: the AI judge saw each task's statement, hands-on hours and steps, never its calendar time. Some steps describe waiting (approvals, recruitment, incubation). Dropping the 58% of tasks with any waiting-type word in their steps halves the link but keeps it: −31% waiting per SD of the AI rating (95% CI −38 to −22); median waiting 2.7 hours for the fifth AI does best against 8.8 days for the fifth it does worst.
 
 All times and ratings are SciNet's model-based estimates; the relationships are associations across tasks, not effects of using AI.
 

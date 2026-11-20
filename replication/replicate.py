@@ -26,6 +26,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 
 # ---------------------------------------------------------------- data
+DATA_DIR = None
+
+
 def get_scinet(path):
     if not os.path.isdir(os.path.join(path, "data")):
         print(f"Cloning SciNet into {path} ...")
@@ -112,7 +115,32 @@ def regressions(s):
             cov_type="cluster", cov_kwds={"groups": pd.factorize(g.sf)[0]})
         by_domain[dom] = {"coef_z": round(r.params["z"], 3), "t": round(r.tvalues["z"], 1)}
     out["calendar_to_work_ratio_by_domain"] = by_domain
+    out["no_waiting_words_in_steps"] = waiting_words_check(x)
     return out
+
+
+WAIT_WORDS = (r"\b(?:wait|waiting|await|incubat|grow|growth|cultur|approv|permit|ethic|IRB|consent|recruit|schedul|deliver|ship|queue|"
+              r"negotiat|request|apply for|application|review board|fieldwork|season|follow-up|longitudinal|cure|dry|settle|ferment)")
+
+
+def waiting_words_check(x):
+    """Circularity check. The AI judge never saw calendar time, but it did read each task's steps, and some steps
+    describe waiting (approvals, recruitment, incubation...). Drop every task with any such word in its steps and
+    re-estimate: if the link survived only through those steps, it would vanish here."""
+    ss = pd.read_csv(f"{DATA_DIR}/substeps.csv.gz")
+    ss = ss[ss.level == "subfield"]
+    ss["flag"] = ss.substep.str.contains(WAIT_WORDS, case=False, regex=True)
+    f = ss.groupby(KEY).flag.any().reset_index()
+    y = x.merge(f, on=KEY, how="left")
+    y["flag"] = y.flag.fillna(False).astype(bool)
+    keep = y[~y.flag].copy()
+    r = smf.ols("lw ~ z + lh + C(sf)", keep).fit(cov_type="cluster", cov_kwds={"groups": pd.factorize(keep.sf)[0]})
+    lo, hi = r.conf_int().loc["z"]
+    q = keep.groupby("q").wait_hours.median()
+    return {"share_of_tasks_flagged": float(round(y.flag.mean(), 3)), "n_kept": int(len(keep)),
+            "pct_change_per_sd": float(round(100 * (np.exp(r.params["z"]) - 1), 1)),
+            "ci95": [float(round(100 * (np.exp(lo) - 1), 1)), float(round(100 * (np.exp(hi) - 1), 1))],
+            "median_wait_best_fifth_hours": float(round(q.get(4), 1)), "median_wait_worst_fifth_days": float(round(q.get(0) / 24, 1))}
 
 
 def compute(D):
@@ -223,6 +251,9 @@ def summary(res):
         f"Worst fifth: {wk[0]:.0%} of all hands-on work, {ws[0]:.0%} of all waiting; best fifth: {wk[4]:.0%} / {ws[4]:.0%}",
         f"Within subfields at equal hands-on hours: {r['subfield_fe_hours']['pct_change_per_sd']}% waiting per SD of AI rating "
         f"(95% CI {r['subfield_fe_hours']['ci95']}); adding physical and people-facing work: {r['plus_physical_people']['pct_change_per_sd']}%",
+        f"Without tasks whose steps mention waiting ({r['no_waiting_words_in_steps']['share_of_tasks_flagged']:.0%} dropped): "
+        f"{r['no_waiting_words_in_steps']['pct_change_per_sd']}% per SD (95% CI {r['no_waiting_words_in_steps']['ci95']}); "
+        f"median wait {r['no_waiting_words_in_steps']['median_wait_best_fifth_hours']} h vs {r['no_waiting_words_in_steps']['median_wait_worst_fifth_days']} days",
     ]
     return "\n".join(lines)
 
@@ -233,6 +264,7 @@ if __name__ == "__main__":
     ap.add_argument("--out", default=os.path.join(HERE, "output"))
     a = ap.parse_args()
     D = get_scinet(a.scinet)
+    DATA_DIR = D
     os.makedirs(a.out, exist_ok=True)
     s, res = compute(D)
     with open(os.path.join(a.out, "numbers.json"), "w") as f:

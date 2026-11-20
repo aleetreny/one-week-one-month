@@ -214,6 +214,17 @@
     "coef_z": -0.988,
     "t": -29.7
    }
+  },
+  "no_waiting_words_in_steps": {
+   "share_of_tasks_flagged": 0.578,
+   "n_kept": 2811,
+   "pct_change_per_sd": -30.6,
+   "ci95": [
+    -38.3,
+    -22.0
+   ],
+   "median_wait_best_fifth_hours": 2.7,
+   "median_wait_worst_fifth_days": 8.8
   }
  }
 }
